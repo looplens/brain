@@ -1,0 +1,114 @@
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @unique @default(cuid())
+  token        String    @unique
+  name         String
+  username     String    @unique
+  email        String    @unique
+  password     String
+  avatar       String
+  about        String?
+  website      String?
+  language     Language? @default(TR)
+  flags        Int?
+  location     String?
+  accent_color String?
+  verify_code  String?
+  created_at   DateTime? @default(now())
+  updated_at   DateTime? @default(now()) @updatedAt
+}
+
+model Post {
+  id          String    @id @unique @default(cuid())
+  author_id   String
+  content     String?
+  attachments String?
+  flags       Int
+  location    String?
+  created_at  DateTime? @default(now())
+  updated_at  DateTime? @default(now()) @updatedAt
+}
+
+model Like {
+  id         String    @id @unique @default(cuid())
+  user_id    String
+  post_id    String
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now()) @updatedAt
+}
+
+model Comments {
+  id         String    @id @unique @default(cuid())
+  author_id  String
+  content    String
+  flags      Int
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now()) @updatedAt
+}
+
+model Bookmark {
+  id         String    @id @unique @default(cuid())
+  author_id  String
+  post_id    String
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now()) @updatedAt
+}
+
+model Block {
+  id         String     @id @unique @default(cuid())
+  client_id  String
+  user_id    String
+  type       BlockType? @default(BLOCK)
+  created_at DateTime?  @default(now())
+  updated_at DateTime?  @default(now()) @updatedAt
+}
+
+model Logs {
+  id           String    @id @unique @default(cuid())
+  user_id      String
+  activity     String
+  type         LogType
+  ip_address   String?
+  os_name      String
+  browser_name String
+  ip_location  String
+  created_at   DateTime? @default(now())
+}
+
+model Follow {
+  id         String     @id @unique @default(cuid())
+  client_id  String
+  profile_id String
+  type       FollowType
+  created_at DateTime?  @default(now())
+  updated_at DateTime?  @default(now()) @updatedAt
+}
+
+enum Language {
+  TR
+  EN
+}
+
+enum BlockType {
+  BLOCK
+  MUTE
+}
+
+enum LogType {
+  LOGIN
+  ACTIVITY
+}
+
+enum FollowType {
+  PENDING
+  ACCEPT
+}

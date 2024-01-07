@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  db:
+    container_name: pg_llens
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_USER: ll3ns
+      POSTGRES_PASSWORD: Eva123
+      POSTGRES_DB: square
+    ports:
+      - "5428:5432"
+    networks:
+      - access_point
+  pgadmin:
+    container_name: pgadmin_llens
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: loop@lens.com
+      PGADMIN_DEFAULT_PASSWORD: eStalav!s1a
+    links:
+      - db
+    ports:
+      - "5050:80"
+    networks:
+      - access_point
+
+networks:
+  access_point:
