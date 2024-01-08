@@ -1,30 +1,34 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from prisma.models import User, Follow
 from helpers.format_user import format_user
+from middlewares.token import oauth2_token_control
 
 
 router = APIRouter()
 
 
 @router.post("/follow")
-async def follow(request: Request):
+async def follow(request: Request, client = Depends(oauth2_token_control)):
   try:
     data = await request.json()
   except ValueError:
     raise HTTPException(status_code=400, detail="Invalid JSON format")
 
-  required_fields = ["client_id", "profile_id"]
+  required_fields = ["profile_id"]
   missing_field = next((field for field in required_fields if field not in data), None)
 
   if missing_field:
     raise HTTPException(status_code=422, detail=f"{missing_field} is missing")
+
+  if data["profile_id"] == client.id:
+    raise HTTPException(status_code=422, detail=f"You cant follow your profile!")
 
   user = await User.prisma().find_first(where={"id": data["profile_id"]})
 
   if user:
     follow_instance = await Follow.prisma().find_first(
       where={
-        "client_id": data["client_id"],
+        "client_id": client.id,
         "profile_id": data["profile_id"]
       }
     )
@@ -32,7 +36,7 @@ async def follow(request: Request):
     if follow_instance:
       await Follow.prisma().delete_many(
         where={
-            "client_id": data["client_id"],
+            "client_id": client.id,
             "profile_id": data["profile_id"]
         }
       )
@@ -41,7 +45,7 @@ async def follow(request: Request):
     else:
       await Follow.prisma().create(
         data={
-          "client_id": data["client_id"],
+          "client_id": client.id,
           "profile_id": data["profile_id"],
           "type": "ACCEPT"
         }

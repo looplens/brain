@@ -1,12 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from prisma.models import User, Follow
+from middlewares.token import oauth2_token_control
 
 
 router = APIRouter()
 
 
 @router.get("/profile")
-async def profile(username: str | None = None):
+async def profile(username: str | None = None, client = Depends(oauth2_token_control)):
   result = {"available": False}
 
   if username is not None:
