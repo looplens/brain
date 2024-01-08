@@ -1,24 +1,18 @@
-from fastapi import FastAPI, HTTPException, Request, Depends, FastAPI, status
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from prisma import Prisma
+from routes.routes import router as api_router
+from starlette.datastructures import Headers
 
-from prisma.models import User
-
-from routes.users.routes import router as users_router
-from routes.posts.routes import router as posts_router
-from routes.search.routes import router as search_router
-
-from middlewares.json_control import json_middleware
-from middlewares.token import oauth2_token_control
+class NoCache(StaticFiles):
+  def is_not_modified(self, response_headers: Headers, request_headers: Headers) -> bool:
+    return False
 
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.include_router(users_router, prefix="/users")
-app.include_router(posts_router, prefix="/posts")
-app.include_router(search_router, prefix="/search")
-# app.middleware("http")(json_middleware)
+app.include_router(api_router, prefix="/api/v1")
+app.mount("/assets", NoCache(directory="./assets/"), name="assets")
+
 prisma = Prisma(
   auto_register=True,
   connect_timeout=60000
@@ -42,11 +36,3 @@ async def root():
     "title": "Looplens",
     "version": "1.0.0"
   }
-
-
-@app.get("/robots.txt")
-async def robots():
-  with open("./static/robots.txt", "r") as file:
-    content = file.read()
-
-  return HTMLResponse(content=content, status_code=200)
