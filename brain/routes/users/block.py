@@ -58,7 +58,7 @@ async def block(request: Request, client = Depends(oauth2_token_control)):
 
 
 @router.get("/blocks")
-async def blocks(id: str | None = None):
+async def blocks(id: str | None = None, client = Depends(oauth2_token_control)):
   result = {"available": False, "list": []}
 
   if id is not None:

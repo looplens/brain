@@ -26,4 +26,5 @@ uploads/
 # MacOS File System
 .DS_Store
 
-react-build/
+
+.env
