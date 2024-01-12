@@ -1,3 +1,4 @@
+from argon2 import PasswordHasher
 from fastapi import APIRouter, HTTPException, Request
 from prisma.models import User
 from helpers.missing_data import missing_data
@@ -19,15 +20,18 @@ async def login(request: Request):
   if missing_field:
     return missing_data(f"{missing_field} eksik")
 
-  user = await User.prisma().find_first(
-    where={
-      "username": data["username"],
-      "password": data["password"]
-    }
-  )
+  user = await User.prisma().find_first(where={
+    "username": data["username"]
+  })
 
   if user:
-    return { "available": True, "session": { "token": user.token } }
-  else:
-    return { "available": False }
+    ph = PasswordHasher()
+
+    try:
+      if ph.verify(user.password, data["password"]):
+        return { "status": True, "session": { "access_token": user.token } }
+    except Exception as e:
+      return { "status": False, "message": "The password does not match the supplied hash." }
+
+  return { "status": False, "message": ":-)" }
 

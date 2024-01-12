@@ -9,22 +9,27 @@ datasource db {
 }
 
 model User {
-  id           String    @id @unique @default(cuid())
-  token        String    @unique
-  name         String
-  username     String    @unique
-  email        String    @unique
-  password     String
-  avatar       String
-  about        String?
-  website      String?
-  language     Language? @default(TR)
-  flags        Int?
-  location     String?
-  accent_color String?
-  verify_code  String?
-  created_at   DateTime? @default(now())
-  updated_at   DateTime? @default(now()) @updatedAt
+  id             String    @id @unique @default(cuid())
+  token          String    @unique
+  name           String
+  username       String    @unique
+  email          String    @unique
+  password       String
+  avatar         String
+  banner         String?
+  about          String?
+  website        String?
+  language       Language? @default(TR)
+  flags          Int?
+  privacy_flags  Int?
+  location       String?
+  accent_color   String?
+  points         Int?
+  verify_code    String?
+  totp_secret    String?
+  two_fa_enabled Boolean?  @default(false)
+  created_at     DateTime? @default(now())
+  updated_at     DateTime? @default(now()) @updatedAt
 }
 
 model Post {
@@ -42,17 +47,21 @@ model Like {
   id         String    @id @unique @default(cuid())
   user_id    String
   post_id    String
+  type       LikeType? @default(POST)
   created_at DateTime? @default(now())
   updated_at DateTime? @default(now()) @updatedAt
 }
 
 model Comments {
-  id         String    @id @unique @default(cuid())
+  id         String       @id @unique @default(cuid())
   author_id  String
+  post_id    String
+  replied_to String?
   content    String
   flags      Int
-  created_at DateTime? @default(now())
-  updated_at DateTime? @default(now()) @updatedAt
+  type       CommentType? @default(COMMENT)
+  created_at DateTime?    @default(now())
+  updated_at DateTime?    @default(now()) @updatedAt
 }
 
 model Bookmark {
@@ -78,9 +87,9 @@ model Logs {
   activity     String
   type         LogType
   ip_address   String?
+  ip_location  String
   os_name      String
   browser_name String
-  ip_location  String
   created_at   DateTime? @default(now())
 }
 
@@ -91,6 +100,52 @@ model Follow {
   type       FollowType
   created_at DateTime?  @default(now())
   updated_at DateTime?  @default(now()) @updatedAt
+}
+
+model Notification {
+  id           String           @id @unique @default(cuid())
+  client_id    String
+  item_id      String?
+  type         NotificationType
+  mark_as_read Boolean?         @default(false)
+  created_at   DateTime?        @default(now())
+  updated_at   DateTime?        @default(now()) @updatedAt
+}
+
+model Subscriptions {
+  id         String           @id @unique @default(cuid())
+  client_id  String
+  profile_id String
+  type       SubscriptionType @default(ALL)
+  created_at DateTime?        @default(now())
+  updated_at DateTime?        @default(now()) @updatedAt
+}
+
+model DangerEvent {
+  id         String          @id @unique @default(cuid())
+  client_id  String
+  token      String
+  type       DangerEventType
+  created_at DateTime?       @default(now())
+  updated_at DateTime?       @default(now()) @updatedAt
+}
+
+model HiddenPost {
+  id         String    @id @unique @default(cuid())
+  client_id  String
+  hide       Boolean?  @default(true)
+  post_id    String
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now()) @updatedAt
+}
+
+model Hashtags {
+  id         String    @id @unique @default(cuid())
+  name       String
+  count      Int
+  language   Language
+  created_at DateTime? @default(now())
+  updated_at DateTime? @default(now()) @updatedAt
 }
 
 enum Language {
@@ -111,4 +166,35 @@ enum LogType {
 enum FollowType {
   PENDING
   ACCEPT
+}
+
+enum NotificationType {
+  REPLY
+  COMMENT
+  LIKE_COMMENT
+  LIKE_POST
+  NEW_POST
+  MENTION
+  QUOTE
+}
+
+enum SubscriptionType {
+  ALL
+  ONLY_POSTS
+  NEVER
+}
+
+enum DangerEventType {
+  RESET_PASSWORD
+  DELETE_ACCOUNT
+}
+
+enum CommentType {
+  COMMENT
+  REPLY
+}
+
+enum LikeType {
+  POST
+  COMMENT
 }

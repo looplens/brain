@@ -3,6 +3,7 @@ from prisma.models import User
 from helpers.generate_token import generate_token
 from helpers.missing_data import missing_data
 from helpers.generate_verification_code import generate_verification_code
+from argon2 import PasswordHasher
 
 
 router = APIRouter()
@@ -32,17 +33,22 @@ async def register(request: Request):
 
 
   verification_code = generate_verification_code()
+  ph = PasswordHasher()
+
+  hash = ph.hash(data["password"])
 
   add_db = await User.prisma().create({
     "token": generate_token(),
     "name": data["name"],
     "username": data["username"],
     "email": data["email"],
-    "password": data["password"],
+    "password": hash,
     "avatar": "/static/avatar.png",
     "verify_code": verification_code,
     "accent_color": "#f7bf0a",
-    "flags": 0
+    "flags": 0,
+    "privacy_flags": 0,
+    "points": 0,
   })
 
   if add_db:

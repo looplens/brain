@@ -28,3 +28,7 @@ uploads/
 
 
 .env
+
+# uploaded files
+xl_*
+xs_*

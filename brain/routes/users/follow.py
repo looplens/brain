@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from prisma.models import User, Follow
+from prisma.enums import FollowType
 from helpers.format_user import format_user
 from middlewares.token import oauth2_token_control
 
@@ -41,21 +42,21 @@ async def follow(request: Request, client = Depends(oauth2_token_control)):
         }
       )
 
-      status = "unfollow"
+      message = "unfollow"
     else:
       await Follow.prisma().create(
         data={
           "client_id": client.id,
           "profile_id": data["profile_id"],
-          "type": "ACCEPT"
+          "type": FollowType.ACCEPT
         }
       )
 
-      status = "follow"
+      message = "follow"
 
-    return {"available": True, "status": status}
+    return {"status": True, "message": message}
   else:
-    return {"available": False, "status": "no user"}
+    return {"status": False, "message": "no user"}
 
 
 async def get_follow_data(username: str, profile_id_field: str, endpoint: str):
@@ -65,9 +66,12 @@ async def get_follow_data(username: str, profile_id_field: str, endpoint: str):
     user = await User.prisma().find_first(where={"username": username})
 
     if user:
-      follow_data = await Follow.prisma().find_many(where={profile_id_field: user.id})
+      follow_data = await Follow.prisma().find_many(where={
+        profile_id_field: user.id,
+        type: FollowType.ACCEPT
+      })
 
-      result["available"] = True
+      result["status"] = True
       result["list"] = [
         format_user(await User.prisma().find_first(where={"id": getattr(f, 'client_id' if endpoint == 'followers' else 'profile_id')}))
         for f in follow_data
@@ -77,10 +81,32 @@ async def get_follow_data(username: str, profile_id_field: str, endpoint: str):
 
 
 @router.get("/followers")
-async def followers(username: str | None = None):
+async def followers(username: str | None = None, client = Depends(oauth2_token_control)):
   return await get_follow_data(username, "profile_id", "followers")
 
 
 @router.get("/followings")
-async def followings(username: str | None = None):
+async def followings(username: str | None = None, client = Depends(oauth2_token_control)):
   return await get_follow_data(username, "client_id", "followings")
+
+
+@router.get("/requests")
+async def requests(client = Depends(oauth2_token_control)):
+  pending_requests = await Follow.prisma().find_many(where={
+    "profile_id": client.id,
+    "type": FollowType.PENDING
+  })
+
+  return {
+    "status": True,
+    "requests": [
+      {
+        "user": format_user(await User.prisma().find_first(where={
+          "id": getattr(preq, "profile_id")
+        })),
+        "created_at": preq.created_at,
+        "updated_at": preq.updated_at
+      }
+      for preq in pending_requests
+    ]
+  }

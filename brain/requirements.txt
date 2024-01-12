@@ -22,7 +22,7 @@ charset-normalizer==3.2.0
 click==7.1.2
 comm==0.1.4
 debugpy==1.7.0
-decorator==5.1.1
+decorator==4.4.2
 defusedxml==0.7.1
 distlib==0.3.8
 easygui==0.98.3
@@ -40,6 +40,8 @@ h11==0.14.0
 httpcore==1.0.2
 httpx==0.26.0
 idna==3.4
+imageio==2.33.1
+imageio-ffmpeg==0.4.9
 install==1.3.5
 ipykernel==6.25.2
 ipython==8.15.0
@@ -69,6 +71,7 @@ macholib==1.16.3
 MarkupSafe==2.1.3
 matplotlib-inline==0.1.6
 mistune==3.0.1
+moviepy==1.0.3
 multidict==6.0.4
 nbclient==0.8.0
 nbconvert==7.8.0
@@ -77,6 +80,8 @@ nest-asyncio==1.5.7
 nodeenv==1.8.0
 notebook==7.0.3
 notebook_shim==0.2.3
+numpy==1.26.3
+opencv-python==4.9.0.80
 overrides==7.4.0
 packaging==23.1
 pandocfilters==1.5.0
@@ -87,6 +92,7 @@ pickleshare==0.7.5
 Pillow==10.1.0
 platformdirs==3.10.0
 prisma==0.11.0
+proglog==0.1.10
 prometheus-client==0.17.1
 prompt-toolkit==3.0.39
 psutil==5.9.5
@@ -129,6 +135,7 @@ tinycss2==1.2.1
 tomli==2.0.1
 tomlkit==0.12.3
 tornado==6.3.3
+tqdm==4.66.1
 traitlets==5.9.0
 typing_extensions==4.7.1
 uri-template==1.3.0

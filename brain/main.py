@@ -13,6 +13,7 @@ class NoCache(StaticFiles):
 app = FastAPI()
 app.include_router(api_router, prefix="/api/v1")
 app.mount("/assets", NoCache(directory="./assets/"), name="assets")
+app.mount("/attachments", NoCache(directory="./uploads/"), name="attachments")
 
 prisma = Prisma(
   auto_register=True,
