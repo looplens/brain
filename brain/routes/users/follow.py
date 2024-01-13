@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from prisma.models import User, Follow
 from prisma.enums import FollowType
+from helpers.flags import calculate_user_privacy_flags, UserPrivacyFlags
 from helpers.format_user import format_user
 from middlewares.token import oauth2_token_control
 
@@ -44,11 +45,13 @@ async def follow(request: Request, client = Depends(oauth2_token_control)):
 
       message = "unfollow"
     else:
+      privacy_flags = calculate_user_privacy_flags(user.privacy_flags)
+
       await Follow.prisma().create(
         data={
           "client_id": client.id,
           "profile_id": data["profile_id"],
-          "type": FollowType.ACCEPT
+          "type": FollowType.ACCEPT if UserPrivacyFlags.PRIVATE_ACCOUNT.name not in privacy_flags else FollowType.PENDING
         }
       )
 
@@ -110,3 +113,38 @@ async def requests(client = Depends(oauth2_token_control)):
       for preq in pending_requests
     ]
   }
+
+
+@router.post("/update_request")
+async def follow_request(request: Request, client = Depends(oauth2_token_control)):
+  try:
+    data = await request.json()
+  except ValueError:
+    raise HTTPException(status_code=400, detail="Invalid JSON format")
+
+  required_fields = ["user_id", "type"]
+  missing_field = next((field for field in required_fields if field not in data), None)
+
+  if missing_field:
+    raise HTTPException(status_code=422, detail=f"{missing_field} is missing")
+
+  if data["type"] == "ACCEPT":
+    request_status = await Follow.prisma().update_many(
+      data={
+        "type": FollowType.ACCEPT
+      },
+      where={
+        "client_id": data["user_id"],
+        "profile_id": client.id,
+      }
+    )
+  else:
+    request_status = await Follow.prisma().delete_many(where={
+      "client_id": data["user_id"],
+      "profile_id": client.id,
+    })
+
+  if request_status:
+    return {"status": True}
+
+  return {"status": False}
