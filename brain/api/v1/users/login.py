@@ -1,7 +1,6 @@
 from argon2 import PasswordHasher
 from fastapi import APIRouter, HTTPException, Request
 from prisma.models import User
-from helpers.missing_data import missing_data
 
 
 router = APIRouter()
@@ -18,7 +17,7 @@ async def login(request: Request):
   missing_field = next((field for field in required_fields if data.get(field) is None), None)
 
   if missing_field:
-    return missing_data(f"{missing_field} eksik")
+    raise HTTPException(status_code=422, detail=f"{missing_field} is missing")
 
   user = await User.prisma().find_first(where={
     "username": data["username"]

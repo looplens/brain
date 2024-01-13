@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from prisma.models import User, Block
-from helpers.format_user import format_user
-from helpers.flags import calculate_user_flags
-from middlewares.token import oauth2_token_control
+from services.format_user import format_user
+from services.flags import calculate_user_flags
+from middleware.token import oauth2_token_control
 
 
 router = APIRouter()

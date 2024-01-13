@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from prisma import Prisma
-from helpers.get_ip_details import get_ip_details
-from routes.routes import router as api_router
+from services.ip_details import get_ip_details
+from api.routes import api_endpoint
 from starlette.datastructures import Headers
 
 class NoCache(StaticFiles):
@@ -11,8 +11,8 @@ class NoCache(StaticFiles):
 
 
 app = FastAPI()
-app.include_router(api_router, prefix="/api/v1")
-app.mount("/assets", NoCache(directory="./assets/"), name="assets")
+app.include_router(api_endpoint, prefix="/api")
+app.mount("/assets", NoCache(directory="./static/"), name="assets")
 app.mount("/attachments", NoCache(directory="./uploads/"), name="attachments")
 
 prisma = Prisma(

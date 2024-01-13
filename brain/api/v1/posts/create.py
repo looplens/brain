@@ -1,14 +1,15 @@
 from typing import List
 from fastapi import APIRouter, Depends, File, UploadFile, Form
 from prisma.models import Post
-from helpers.compress_image import compress_image
-from helpers.compress_video import compress_video
-from helpers.generate_unique_id import generate_unique_id
-from middlewares.token import oauth2_token_control
+from services.id_generator import IDGenerator
+from services.compressor import MediaCompressor
+from middleware.token import oauth2_token_control
 import os
 
 
 router = APIRouter()
+id_generator = IDGenerator()
+media_compressor = MediaCompressor()
 
 
 @router.put("/")
@@ -53,12 +54,13 @@ async def create_post(
             os.makedirs(post_folder)
 
           _, file_extension = os.path.splitext(uploaded_file.filename)
-          file_name_original   = f"{post_folder}/xl_{generate_unique_id()}{file_extension.lower()}"
-          file_name_compressed = f"{post_folder}/xs_{generate_unique_id()}{file_extension.lower()}"
+          file_unique_id = id_generator.unique_id()
+          file_name_original   = f"{post_folder}/xl_{file_unique_id}{file_extension.lower()}"
+          file_name_compressed = f"{post_folder}/xs_{file_unique_id}{file_extension.lower()}"
           file_content = await uploaded_file.read()
 
           if file_extension.lower() in {".jpg", ".jpeg", ".png"}:
-            compressed_content = await compress_image(file_content)
+            compressed_content = await media_compressor.compress_image(file_content)
 
             with open(file_name_compressed, "wb") as new_file:
               new_file.write(compressed_content)
@@ -71,7 +73,7 @@ async def create_post(
             with open(file_name_original, "wb") as new_file:
               new_file.write(file_content)
 
-            compressed_video = compress_video(file_name_original, file_name_compressed)
+            compressed_video = media_compressor.compress_video(file_name_original, file_name_compressed)
 
             if compressed_video:
               uploaded_attachments.append(file_name_compressed.replace(base_folder, "attachments"))

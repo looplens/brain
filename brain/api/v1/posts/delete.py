@@ -2,8 +2,8 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from prisma.models import Post, Like, Comments
 from prisma.enums import LikeType
-from helpers.flags import calculate_post_flags, PostFlags
-from middlewares.token import oauth2_token_control
+from services.flags import calculate_post_flags, PostFlags
+from middleware.token import oauth2_token_control
 
 
 router = APIRouter()

@@ -1,6 +1,3 @@
-from helpers.flags import calculate_user_flags
-
-
 def format_user(data):
   return {
     "id": getattr(data, "id", None),

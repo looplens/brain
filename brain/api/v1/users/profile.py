@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from prisma.models import User, Follow
-from middlewares.token import oauth2_token_control
+from middleware.token import oauth2_token_control
 
 
 router = APIRouter()

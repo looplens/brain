@@ -1,7 +1,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from prisma.models import Post, Bookmark
-from middlewares.token import oauth2_token_control
+from middleware.token import oauth2_token_control
 
 
 router = APIRouter()

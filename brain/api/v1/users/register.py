@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, Request
 from prisma.models import User
-from helpers.generate_token import generate_token
-from helpers.missing_data import missing_data
-from helpers.generate_verification_code import generate_verification_code
+from services.id_generator import IDGenerator
 from argon2 import PasswordHasher
 
 
 router = APIRouter()
+id_generator = IDGenerator()
 
 
 @router.post("/register")
@@ -20,25 +19,25 @@ async def register(request: Request):
   missing_field = next((field for field in required_fields if data.get(field) is None), None)
 
   if missing_field:
-    return missing_data(f"{missing_field} eksik")
+    raise HTTPException(status_code=422, detail=f"{missing_field} is missing")
 
   if data["password"] != data["password_control"]:
-    return missing_data("Şifreler eşleşmiyor")
+    raise HTTPException(status_code=422, detail=f"Şifreler eşleşmiyor")
 
   for field, db_field in [("username", "Bu kullanıcı adı kullanılıyor"), ("email", "Bu e-posta adresi kullanılıyor")]:
     check_count = await User.prisma().count(where={field: data.get(field)})
 
     if check_count != 0:
-      return missing_data(db_field)
+      raise HTTPException(status_code=422, detail=f"{db_field} is missing")
 
 
-  verification_code = generate_verification_code()
+  verification_code = id_generator.six_digits()
   ph = PasswordHasher()
 
   hash = ph.hash(data["password"])
 
   add_db = await User.prisma().create({
-    "token": generate_token(),
+    "token": id_generator.token(),
     "name": data["name"],
     "username": data["username"],
     "email": data["email"],
