@@ -2,46 +2,34 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request
 from prisma.models import Post, Bookmark
 from middleware.token import oauth2_token_control
+from services.process_request import process_request
 
 
 router = APIRouter()
 
 
 @router.post("/add_bookmark")
-async def add_bookmark(request: Request, client = Depends(oauth2_token_control)):
-  try:
-    data = await request.json()
-  except ValueError:
-    raise HTTPException(status_code=400, detail="Invalid JSON format")
+async def add_bookmark(request: Request, client=Depends(oauth2_token_control)):
+    data = await process_request(request, ["post_id"])
 
-  required_fields = ["post_id"]
-  missing_field = next((field for field in required_fields if field not in data), None)
+    post_id = data["post_id"]
+    post_control = await Post.prisma().find_first(where={"id": post_id})
 
-  if missing_field:
-    raise HTTPException(status_code=422, detail=f"{missing_field} is missing")
+    if post_control:
+        control_bookmark = await Bookmark.prisma().find_many(
+            where={"author_id": client.id, "post_id": post_id}
+        )
 
-  post_id = data["post_id"]
+        if control_bookmark:
+            bookmark = await Bookmark.prisma().delete_many(
+                where={"author_id": client.id, "post_id": post_id}
+            )
+        else:
+            bookmark = await Bookmark.prisma().create(
+                data={"author_id": client.id, "post_id": post_id}
+            )
 
-  post_control = await Post.prisma().find_first(where={"id": post_id})
+            if bookmark:
+                return {"status": True, "like": bookmark}
 
-  if post_control:
-    control_bookmark = await Bookmark.prisma().find_many(where={
-       "author_id": client.id,
-       "post_id": post_id
-    })
-
-    if control_bookmark:
-      bookmark = await Bookmark.prisma().delete_many(where={
-        "author_id": client.id,
-        "post_id": post_id
-      })
-    else:
-      bookmark = await Bookmark.prisma().create(data={
-        "author_id": client.id,
-        "post_id": post_id
-      })
-
-      if bookmark:
-        return {"status": True, "like": bookmark}
-
-  return {"status": False}
+    return {"status": False}

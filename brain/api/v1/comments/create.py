@@ -4,57 +4,50 @@ from prisma.models import Post, Comments
 from prisma.enums import CommentType
 from middleware.token import oauth2_token_control
 from services.flags import calculate_comment_flags, calculate_post_flags, PostFlags
+from services.process_request import process_request
 
 
 router = APIRouter()
 
 
 @router.put("/")
-async def new_comment(request: Request, client = Depends(oauth2_token_control)):
-  try:
-    data = await request.json()
-  except ValueError:
-    raise HTTPException(status_code=400, detail="Invalid JSON format")
+async def new_comment(request: Request, client=Depends(oauth2_token_control)):
+    data = await process_request(request, ["post_id", "replied_to", "content", "type"])
 
-  required_fields = ["post_id", "replied_to", "content", "type"]
-  missing_field = next((field for field in required_fields if field not in data), None)
+    content = data["content"]
+    comment_type = (
+        CommentType.COMMENT if data["type"] == "COMMENT" else CommentType.REPLY
+    )
 
-  if missing_field:
-    raise HTTPException(status_code=422, detail=f"{missing_field} is missing")
+    if len(content) <= 128:
+        post_control = await Post.prisma().find_first(where={"id": data["post_id"]})
+        post_flags = calculate_post_flags(post_control.flags)
 
-  content = data["content"]
-  comment_type = CommentType.COMMENT if data["type"] == "COMMENT" else CommentType.REPLY
+        if post_control and PostFlags.DISABLED_COMMENTS.name not in post_flags:
+            replied_controlled_id = None
 
-  if len(content) <= 128:
-    post_control = await Post.prisma().find_first(where={
-      "id": data["post_id"]
-    })
-    post_flags = calculate_post_flags(post_control.flags)
+            if comment_type == CommentType.REPLY:
+                reply_control = await Comments.prisma().find_first(
+                    where={"id": data["replied_to"], "post_id": data["post_id"]}
+                )
 
-    if post_control and PostFlags.DISABLED_COMMENTS.name not in post_flags:
-      replied_controlled_id = None
+                if reply_control:
+                    replied_controlled_id = reply_control.id
+                else:
+                    comment_type = CommentType.COMMENT
 
-      if comment_type == CommentType.REPLY:
-        reply_control = await Comments.prisma().find_first(where={
-          "id": data["replied_to"],
-          "post_id": data["post_id"]
-        })
+            create_comment = await Comments.prisma().create(
+                data={
+                    "author_id": client.id,
+                    "post_id": post_control.id,
+                    "replied_to": replied_controlled_id,
+                    "content": content,
+                    "flags": 0,
+                    "type": comment_type,
+                }
+            )
 
-        if reply_control:
-          replied_controlled_id = reply_control.id
-        else:
-          comment_type = CommentType.COMMENT
+            if create_comment:
+                return {"status": True, "comment_id": create_comment.id}
 
-      create_comment = await Comments.prisma().create(data={
-        "author_id": client.id,
-        "post_id": post_control.id,
-        "replied_to": replied_controlled_id,
-        "content": content,
-        "flags": 0,
-        "type": comment_type
-      })
-
-      if create_comment:
-        return {"status": True, "comment_id": create_comment.id}
-
-  return {"status": False}
+    return {"status": False}

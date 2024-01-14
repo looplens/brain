@@ -20,4 +20,3 @@ router.include_router(like_router, tags=["like"])
 router.include_router(likes_router, tags=["likes"])
 
 router.include_router(bookmark_router, tags=["bookmark"])
-
