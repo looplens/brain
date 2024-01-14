@@ -1,28 +1,39 @@
+from pydantic import BaseModel, constr
 from argon2 import PasswordHasher
-from fastapi import APIRouter, HTTPException, Request
-from services.process_request import process_request
+from fastapi import APIRouter, Request
 from prisma.models import User
 
-
 router = APIRouter()
+ph = PasswordHasher()
 
+class LoginData(BaseModel):
+    username: constr(min_length=2, max_length=32)
+    password: str
+
+ERROR_CODES = {
+    "user_not_found": 1,
+    "password_mismatch": 2
+}
 
 @router.post("/login")
 async def login(request: Request):
-    data = await process_request(request, ["username", "password"])
+    try:
+        data = await request.json()
+        login_data = LoginData(**data)
+    except ValueError as e:
+        return {"status": False, "error_code": ERROR_CODES["validation_error"], "message": str(e)}
 
-    user = await User.prisma().find_first(where={"username": data["username"]})
+    print(login_data.username)
 
-    if user:
-        ph = PasswordHasher()
+    user = await User.prisma().find_first(where={"username": login_data.username})
 
-        try:
-            if ph.verify(user.password, data["password"]):
-                return {"status": True, "session": {"access_token": user.token}}
-        except Exception as e:
-            return {
-                "status": False,
-                "message": "The password does not match the supplied hash.",
-            }
+    if not user:
+        return {"status": False, "error_code": ERROR_CODES["user_not_found"]}
 
-    return {"status": False, "message": ":-)"}
+    try:
+        if ph.verify(user.password, login_data.password):
+            return {"status": True, "data": {"access_token": user.token}}
+    except Exception:
+        return {"status": False, "error_code": ERROR_CODES["password_mismatch"]}
+
+    return {"status": False, "error_code": "unknown_error"}

@@ -1,67 +1,71 @@
-from fastapi import APIRouter, HTTPException, Request
+import re
+from fastapi import APIRouter, Request
+from pydantic import BaseModel, EmailStr, constr, ValidationError
 from prisma.models import User
 from services.id_generator import IDGenerator
 from argon2 import PasswordHasher
 from services.email_validator import is_valid_email
-from services.process_request import process_request
-import re
-
 
 router = APIRouter()
 id_generator = IDGenerator()
 ph = PasswordHasher()
 
+class RegistrationData(BaseModel):
+    name: constr(max_length=48)
+    email: EmailStr
+    username: constr(min_length=2, max_length=32)
+    password: str
+    password_control: str
+
+ERROR_CODES = {
+    "validation_error": 1,
+    "username_in_use": 3,
+    "email_in_use": 4,
+    "password_mismatch": 5,
+    "user_creation_failed": 6
+}
 
 @router.post("/register")
 async def register(request: Request):
-    data = await process_request(request, ["name", "email", "username", "password", "password_control"])
+    try:
+        data = await request.json()
+        registration_data = RegistrationData(**data)
+    except ValidationError:
+        return {"status": False, "error_code": ERROR_CODES["validation_error"]}
 
-    if data["password"] != data["password_control"]:
-        return {"status": False, "message_code": 5}  # şifreler eşleşmiyor
+    if registration_data.password != registration_data.password_control:
+        return {"status": False, "error_code": ERROR_CODES["password_mismatch"]}
 
-    if not is_valid_email(data["email"]):
-        return {"status": False, "message_code": 6}  # email arızalı
+    existing_user_by_username = await User.prisma().find_first(where={"username": registration_data.username})
+    if existing_user_by_username:
+        return {"status": False, "error_code": ERROR_CODES["username_in_use"]}
 
-    if len(data["username"]) > 32 or len(data["username"]) < 2:
-        return {"status": False, "message_code": 3}  # kullanıcı adı çok uzun
+    existing_user_by_email = await User.prisma().find_first(where={"email": registration_data.email})
+    if existing_user_by_email:
+        return {"status": False, "error_code": ERROR_CODES["email_in_use"]}
 
-    if len(data["name"]) > 48:
-        return {"status": False, "message_code": 2}  # isim çok uzun
-
-    for field, db_field in [("username", "username"), ("email", "email")]:
-        check_count = await User.prisma().count(where={field: data.get(field)})
-
-        if check_count != 0:
-            return {
-                "status": False,
-                "message_code": 4,
-                "message": db_field,
-            }  # x kullanılıyor
-
+    user_token = id_generator.token()
     verification_code = id_generator.six_digits()
-    hashed_password = ph.hash(data["password"])
-    safe_username = re.sub(r"[^a-zA-Z]", "", data["username"])
+    hashed_password = ph.hash(registration_data.password)
+    safe_username = re.sub(r"[^a-zA-Z]", "", registration_data.username)
 
-    add_db = await User.prisma().create(
-        {
-            "token": id_generator.token(),
-            "name": data["name"],
-            "username": safe_username.lower(),
-            "email": data["email"],
-            "password": hashed_password,
-            "avatar": "assets/avatars/octopus-1.png",
-            "verify_code": verification_code,
-            "accent_color": "#f7bf0a",
-            "flags": 0,
-            "privacy_flags": 0,
-            "points": 0,
-        }
-    )
+    try:
+        new_user = await User.prisma().create(
+            data={
+                "token": user_token,
+                "name": registration_data.name,
+                "email": registration_data.email,
+                "username": safe_username,
+                "password": hashed_password,
+                "avatar": "assets/avatars/octopus-1.png",
+                "verify_code": verification_code,
+                "accent_color": "#f7bf0a",
+                "flags": 0,
+                "privacy_flags": 0,
+                "points": 0,
+            }
+        )
+    except Exception:
+        return {"status": False, "error_code": ERROR_CODES["user_creation_failed"]}
 
-    if add_db:
-        return {
-            "status": True,
-            "user": add_db,
-        }
-    else:
-        return {"status": False, "message_code": 1}
+    return {"status": True, "data": new_user}
