@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 class NoCache(StaticFiles):
     def is_not_modified(
         self, response_headers: Headers, request_headers: Headers
-    ) -> bool:
+    ):
         return False
 
 

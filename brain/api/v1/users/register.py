@@ -65,7 +65,8 @@ async def register(request: Request):
                 "points": 0,
             }
         )
-    except Exception:
+    except Exception as e:
+        print(e)
         return {"status": False, "error_code": ERROR_CODES["user_creation_failed"]}
 
     return {"status": True, "data": new_user}

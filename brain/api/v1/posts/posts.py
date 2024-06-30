@@ -11,7 +11,7 @@ import re
 router = APIRouter()
 
 
-@router.get("/")
+@router.post("/collect")
 async def get_posts(request: Request, client=Depends(oauth2_token_control)):
     data = await process_request(request, ["type", "term", "page"])
 

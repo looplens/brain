@@ -105,6 +105,7 @@ async def create_post(
                         )
 
         except Exception as e:
+            print(e)
             return {"status": False, "error_code": ERROR_CODES["file_saving_error"]}
 
     if uploaded_attachments:
